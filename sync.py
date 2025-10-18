@@ -1,63 +1,129 @@
-import os, sys
+"""
+sync.py
+Safe local sync logic for Busy -> cache.db
+
+Usage:
+  - From Flask when ALLOW_SYNC=1: app will import this file and call run_sync()
+  - From command line locally: python sync.py
+Notes:
+  - This code imports pyodbc **inside** run_sync() so cloud deploys that import this file won't attempt to load ODBC.
+  - Configure connection via environment variables:
+      SQLSERVER, SQLDATABASE, SQLUSER, SQLPASSWORD, SQLDRIVER
+"""
+
+import os
+import sqlite3
 import pandas as pd
-from sqlalchemy import create_engine
-from dotenv import load_dotenv
 
-try:
-    import pyodbc
-except Exception as e:
-    print("ERROR: pyodbc import failed:", e)
-    sys.exit(1)
+# The exact SQL you insisted on (unchanged)
+BUSY_SQL = """
+SELECT
+  I.Name                                   AS ItemName,
+  I.Alias                                  AS ItemAlias,
+  G.Name                                   AS GroupName,
+  ISNULL(I.D2, 0)                          AS Item_MRP,
+  ISNULL(I.D3, 0)                          AS Item_Sale_Price,
+  COALESCE(NULLIF(I.D9, 0), OV.OpenValPerUnit, 0) AS Item_SelfVal_Price,
+  ISNULL(SQ.Stock, 0)                      AS Stock
+FROM Master1 I
+LEFT JOIN Master1 G
+  ON I.ParentGrp = G.Code AND G.MasterType = 5
+LEFT JOIN (
+  SELECT T4.MasterCode1 AS ItemCode,
+         SUM(T4.D1) AS OpenQty,
+         SUM(T4.D2) AS OpenValue,
+         CASE WHEN SUM(T4.D1) <> 0 THEN SUM(T4.D2) / SUM(T4.D1) ELSE 0 END AS OpenValPerUnit
+  FROM Tran4 T4
+  GROUP BY T4.MasterCode1
+) OV
+  ON OV.ItemCode = I.Code
+LEFT JOIN (
+  SELECT T2.MasterCode1 AS ItemCode,
+         SUM(CASE WHEN T2.TranType IN (0,1) THEN T2.Value1 ELSE -T2.Value1 END) AS Stock
+  FROM Tran2 T2
+  GROUP BY T2.MasterCode1
+) SQ
+  ON SQ.ItemCode = I.Code
+WHERE I.MasterType = 6
+ORDER BY I.Name
+"""
 
-load_dotenv()
+def run_sync():
+    """
+    Connects to Busy SQL Server via pyodbc, runs BUSY_SQL, writes results to cache.db (table 'items').
+    Returns a dict with summary: {"rows": N, "saved_to": "cache.db"}
+    Raises RuntimeError on failures (pyodbc missing or connection error).
+    """
+    # read connection configuration from environment (safe defaults)
+    server = os.environ.get("SQLSERVER", "").strip()
+    database = os.environ.get("SQLDATABASE", "").strip()
+    user = os.environ.get("SQLUSER", "").strip()
+    password = os.environ.get("SQLPASSWORD", "").strip()
+    driver = os.environ.get("SQLDRIVER", "ODBC Driver 17 for SQL Server").strip()
 
-SQLSERVER   = os.getenv("SQLSERVER", "").strip()
-SQLDATABASE = os.getenv("SQLDATABASE", "").strip()
-SQLUSER     = os.getenv("SQLUSER", "").strip()
-SQLPASSWORD = os.getenv("SQLPASSWORD", "").strip()
-SQLDRIVER   = os.getenv("SQLDRIVER", "").strip() or "ODBC Driver 17 for SQL Server"
+    if not server or not database:
+        raise RuntimeError("SQLSERVER and SQLDATABASE environment variables must be set for sync.")
 
-if not SQLSERVER or not SQLDATABASE:
-    print("Please set SQLSERVER and SQLDATABASE in .env")
-    sys.exit(1)
+    # import pyodbc only when running sync (so cloud imports don't fail)
+    try:
+        import pyodbc
+    except Exception as e:
+        raise RuntimeError("pyodbc import failed: " + str(e))
 
-def connect():
-    if SQLUSER and SQLPASSWORD:
-        conn_str = (
-            f"DRIVER={{{SQLDRIVER}}};"
-            f"SERVER={SQLSERVER};"
-            f"DATABASE={SQLDATABASE};"
-            f"UID={SQLUSER};PWD={SQLPASSWORD};"
-            "Encrypt=yes;TrustServerCertificate=yes;"
-        )
+    # build connection string
+    conn_str = (
+        f"DRIVER={{{driver}}};"
+        f"SERVER={server};DATABASE={database};"
+    )
+    if user:
+        conn_str += f"UID={user};PWD={password};"
     else:
-        conn_str = (
-            f"DRIVER={{{SQLDRIVER}}};"
-            f"SERVER={SQLSERVER};"
-            f"DATABASE={SQLDATABASE};"
-            "Trusted_Connection=yes;Encrypt=yes;TrustServerCertificate=yes;"
-        )
-    return pyodbc.connect(conn_str, timeout=10)
+        # try trusted connection (Windows auth) if user not provided
+        conn_str += "Trusted_Connection=yes;"
 
-print(f"Connecting to {SQLSERVER} / DB={SQLDATABASE} …")
-conn = connect()
-print("Connected.")
+    # trust server certificate to avoid encryption issues on some setups
+    conn_str += "TrustServerCertificate=yes;"
 
-# --- run your exact SQL file ---
-with open("query.sql", "r", encoding="utf-8") as f:
-    sql = f.read()
+    # connect and fetch
+    try:
+        conn = pyodbc.connect(conn_str, autocommit=True)
+    except Exception as e:
+        raise RuntimeError("pyodbc connection failed: " + str(e))
 
-print("Running query …")
-df = pd.read_sql(sql, conn)
-conn.close()
-print(f"Fetched {len(df):,} rows.")
+    try:
+        # Use pandas.read_sql to execute the query
+        df = pd.read_sql(BUSY_SQL, conn)
+    except Exception as e:
+        conn.close()
+        raise RuntimeError("Failed to execute query: " + str(e))
+    finally:
+        try:
+            conn.close()
+        except:
+            pass
 
-df.columns = [c.strip() for c in df.columns]
+    # Save to SQLite cache.db in the same folder as this file (project root)
+    root = os.path.dirname(os.path.abspath(__file__))
+    cache_path = os.path.join(root, "cache.db")
 
-sqlite_path = "cache.db"
-engine = create_engine(f"sqlite:///{sqlite_path}", future=True)
-with engine.begin() as cxn:
-    df.to_sql("items", cxn, if_exists="replace", index=False)
+    try:
+        # Use SQLAlchemy engine to ensure pandas to_sql works reliably
+        from sqlalchemy import create_engine
+        engine = create_engine(f"sqlite:///{cache_path}", future=True)
+        # Save (replace) the items table
+        with engine.begin() as cx:
+            df.to_sql("items", cx, if_exists="replace", index=False)
+    except Exception as e:
+        raise RuntimeError("Failed to write cache.db: " + str(e))
 
-print(f"Saved to {sqlite_path} (table 'items').")
-print(df.head(5).to_string(index=False))
+    return {"rows": int(len(df)), "saved_to": cache_path}
+
+
+# Allow running this script directly on your local machine:
+if __name__ == "__main__":
+    try:
+        result = run_sync()
+        print("Sync completed:", result)
+    except Exception as e:
+        print("Sync failed:", str(e))
+        raise
