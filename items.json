@@ -1563,7 +1563,7 @@
     "Item_MRP": 540.0,
     "Item_Sale_Price": 500.0,
     "Item_SelfVal_Price": 400.0,
-    "Stock": 5.0
+    "Stock": 4.0
   },
   {
     "ItemName": "Garima Rashmalai",
@@ -4929,7 +4929,7 @@
     "Item_MRP": 469.5,
     "Item_Sale_Price": 400.0,
     "Item_SelfVal_Price": 375.6,
-    "Stock": 7.0
+    "Stock": 5.0
   },
   {
     "ItemName": "JMD Milk Shake",
@@ -10545,7 +10545,7 @@
     "Item_MRP": 2100.0,
     "Item_Sale_Price": 1700.0,
     "Item_SelfVal_Price": 1500.0,
-    "Stock": 3.0
+    "Stock": 2.0
   },
   {
     "ItemName": "Kc Zaika E Mumbai",
@@ -15909,7 +15909,7 @@
     "Item_MRP": 1560.0,
     "Item_Sale_Price": 1400.0,
     "Item_SelfVal_Price": 1150.0,
-    "Stock": 28.0
+    "Stock": 29.0
   },
   {
     "ItemName": "Rs Suite",
