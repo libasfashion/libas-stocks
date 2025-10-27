@@ -1,0 +1,38 @@
+Sync failed: SQLSERVER and SQLDATABASE environment variables must be set for sync.
+Traceback (most recent call last):
+  File "E:\busy-inventory-app\sync.py", line 125, in <module>
+    result = run_sync()
+  File "E:\busy-inventory-app\sync.py", line 65, in run_sync
+    raise RuntimeError("SQLSERVER and SQLDATABASE environment variables must be set for sync.")
+RuntimeError: SQLSERVER and SQLDATABASE environment variables must be set for sync.
+Sync failed: SQLSERVER and SQLDATABASE environment variables must be set for sync.
+Traceback (most recent call last):
+  File "E:\busy-inventory-app\sync.py", line 125, in <module>
+    result = run_sync()
+  File "E:\busy-inventory-app\sync.py", line 65, in run_sync
+    raise RuntimeError("SQLSERVER and SQLDATABASE environment variables must be set for sync.")
+RuntimeError: SQLSERVER and SQLDATABASE environment variables must be set for sync.
+E:\busy-inventory-app\sync.py:100: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(BUSY_SQL, conn)
+Sync completed: {'rows': 2413, 'saved_to': 'E:\\busy-inventory-app\\cache.db'}
+E:\busy-inventory-app\sync.py:100: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(BUSY_SQL, conn)
+Sync completed: {'rows': 2414, 'saved_to': 'E:\\busy-inventory-app\\cache.db'}
+E:\busy-inventory-app\sync.py:100: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(BUSY_SQL, conn)
+Sync completed: {'rows': 2414, 'saved_to': 'E:\\busy-inventory-app\\cache.db'}
+E:\busy-inventory-app\sync.py:100: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(BUSY_SQL, conn)
+Sync completed: {'rows': 2414, 'saved_to': 'E:\\busy-inventory-app\\cache.db'}
+E:\busy-inventory-app\sync.py:100: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(BUSY_SQL, conn)
+Sync completed: {'rows': 2493, 'saved_to': 'E:\\busy-inventory-app\\cache.db'}
+E:\busy-inventory-app\sync.py:100: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(BUSY_SQL, conn)
+Sync completed: {'rows': 2493, 'saved_to': 'E:\\busy-inventory-app\\cache.db'}
+E:\busy-inventory-app\sync.py:100: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(BUSY_SQL, conn)
+Sync completed: {'rows': 2493, 'saved_to': 'E:\\busy-inventory-app\\cache.db'}
+E:\busy-inventory-app\sync.py:100: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(BUSY_SQL, conn)
+Sync completed: {'rows': 2492, 'saved_to': 'E:\\busy-inventory-app\\cache.db'}

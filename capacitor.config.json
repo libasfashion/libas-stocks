@@ -1,0 +1,14 @@
+{
+  "appId": "com.libas.app",
+  "appName": "Libas Wholesale",
+  "webDir": "build",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://app.srfashion.online",
+    "cleartext": false,
+    "allowNavigation": [
+      "app.srfashion.online",
+      "www.app.srfashion.online"
+    ]
+  }
+}

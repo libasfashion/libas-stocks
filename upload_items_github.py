@@ -6,7 +6,7 @@ JSON_PATH = os.path.join(ROOT, "items.json")
 
 # Replace these with your GitHub account & repo exactly
 OWNER = "unique205"     # <-- change to your GitHub username if different
-REPO = "libas-site"     # <-- change to your repo name if different
+REPO = "libas-stocks"     # <-- change to your repo name if different
 PATH_IN_REPO = "items.json"
 BRANCH = "main"
 

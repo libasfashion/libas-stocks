@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LIBAS WSL</string>
+    <string name="title_activity_main">LIBAS WSL</string>
+    <string name="package_name">com.libas.app</string>
+    <string name="custom_url_scheme">com.libas.app</string>
+</resources>

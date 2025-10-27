@@ -12,8 +12,13 @@ Notes:
 """
 
 import os
+import sys
 import sqlite3
 import pandas as pd
+from dotenv import load_dotenv
+load_dotenv()
+# ... existing imports and code ...
+
 
 # The exact SQL you insisted on (unchanged)
 BUSY_SQL = """

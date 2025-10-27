@@ -1,0 +1,7 @@
+tunnel: 90cc1d0c-0580-4c79-a95e-e014514a88e7
+credentials-file: C:\ProgramData\.cloudflared\90cc1d0c-0580-4c79-a95e-e014514a88e7.json
+
+ingress:
+  - hostname: app.srfashion.online
+    service: http://127.0.0.1:5000
+  - service: http_status:404
