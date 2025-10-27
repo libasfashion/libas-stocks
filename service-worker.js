@@ -45,7 +45,7 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.startsWith('/api/search')) {
-    event.respondWith(networkFirst(req));
+    event.respondWith(cacheFirst(req)); // Try cache first, fallback to network
   } else {
     event.respondWith(cacheFirst(req));
   }

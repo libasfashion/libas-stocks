@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LIBAS Quotation - Scanner</title>
+  <link rel="manifest" href="/static/manifest.json">
+
+  <!-- libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --royal:#0b3d91;
+      --royal-2:#174ea6;
+      --gold:#d4af37;
+      --muted:#6b6b6b;
+      --redwholesale:#d32f2f;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family:'Poppins',sans-serif;
+      margin:0;
+      min-height:100vh;
+      background: linear-gradient(135deg,#07327a 0%, #1a4fb0 40%, #08284d 100%);
+      color:#111;
+      padding:20px;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:1180px;margin:0 auto}
+
+    /* Update Banner */
+    #updateBanner{
+      display:none;
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:18px;
+      z-index:99999;
+      background:#0b3d91;
+      color:#fff;
+      padding:10px 14px;
+      border-radius:10px;
+      box-shadow:0 6px 20px rgba(0,0,0,0.25);
+      font-weight:700;
+    }
+    #updateReload{
+      margin-left:8px;
+      background:#ffd54f;
+      border:none;
+      padding:6px 10px;
+      border-radius:8px;
+      font-weight:900;
+      cursor:pointer;
+    }
+
+    /* Header */
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:14px;background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));padding:12px 16px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.25);border:1px solid rgba(212,175,55,0.06)}
+    .logo{width:72px;height:72px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--gold);box-shadow:0 8px 20px rgba(0,0,0,0.18);overflow:hidden}
+    .logo img{width:100%;height:100%;object-fit:contain;display:block;padding:6px;background:#fff}
+    .logo-text{display:none;color:#fff;font-weight:900;font-size:22px}
+    .brand-text h1{margin:0;font-size:22px;color:#fff;letter-spacing:1px;font-weight:800}
+    .brand-text p{margin:2px 0 0;font-size:12px;color:rgba(255,255,255,0.9);opacity:0.95}
+
+    .sync-btn{
+      background:linear-gradient(135deg,var(--gold),#ffd87e);
+      border:none;
+      padding:10px 16px;
+      border-radius:10px;
+      color:#111;
+      font-weight:800;
+      cursor:pointer;
+      box-shadow:0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    /* Grid */
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+    @media(max-width:980px){ .grid{grid-template-columns:1fr} }
+
+    /* Cards */
+    .card{background: rgba(255,255,255,0.98);border-radius:14px;padding:16px;box-shadow:0 12px 34px rgba(0,0,0,0.18);border:2px solid rgba(212,175,55,0.08)}
+    
+    /* Search controls container */
+    .search-container{
+      position:relative;
+      margin-bottom:16px;
+    }
+    .controls{display:flex;gap:8px;align-items:center}
+    .search{flex:1;padding:12px;border-radius:10px;border:1px solid #e6e6e6;font-size:15px;font-family:'Poppins',sans-serif}
+    .icon-btn{
+      padding:12px 16px;
+      border-radius:10px;
+      border:none;
+      background:var(--royal);
+      color:#fff;
+      cursor:pointer;
+      font-weight:700;
+      font-size:14px;
+      transition:all 0.2s;
+      white-space:nowrap;
+    }
+    .icon-btn:hover{
+      background:var(--royal-2);
+      transform:translateY(-1px);
+    }
+    .icon-btn:active{
+      transform:translateY(0);
+    }
+
+    /* Dropdown positioning - below search bar */
+    #dropdown{
+      position:absolute;
+      left:0;
+      right:0;
+      top:calc(100% + 8px);
+      background:#fff;
+      border-radius:10px;
+      box-shadow:0 12px 34px rgba(0,0,0,0.18);
+      z-index:999;
+      max-height:320px;
+      overflow:auto;
+    }
+    .dd-item{
+      padding:12px;
+      border-bottom:1px solid #eee;
+      cursor:pointer;
+      transition:background 0.15s;
+    }
+    .dd-item:hover{
+      background:#f3f6ff;
+    }
+    .dd-item:last-child{
+      border-bottom:none;
+    }
+
+    .result{margin-top:12px}
+    .product-card{display:flex;gap:14px;align-items:flex-start}
+    .prod-left{flex:1}
+    .prod-title{font-weight:800;font-size:20px;color:var(--royal-2);margin-bottom:6px}
+    .prod-code{font-size:13px;margin-bottom:8px}
+    .prod-code b{font-weight:900}
+    .price-row{display:flex;gap:10px;flex-wrap:wrap}
+    .price-btn{flex:1;padding:10px;border-radius:10px;color:#fff;font-weight:800;cursor:pointer;text-align:center;transition:transform 0.2s}
+    .price-btn:hover{transform:translateY(-2px)}
+    .price-mrp{background:linear-gradient(135deg,#f1c40f,#f7d78c);color:#111}
+    .price-sale{background:linear-gradient(135deg,#0b6fd6,#0b49a5)}
+    .price-wholesale{background:linear-gradient(135deg,#ff7a7a,#ff5252)}
+
+    .muted{color:var(--muted);font-size:12px;margin-top:10px}
+
+    /* Cart */
+    .cart-side{position:sticky;top:24px;height:calc(100vh - 48px);overflow:auto;padding:12px}
+    .cart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .cart-title{font-weight:900;color:var(--royal-2);font-size:18px}
+    .cart-count{background:linear-gradient(135deg,var(--gold),#ffd87e);padding:6px 10px;border-radius:999px;font-weight:800}
+
+    .cart-list{display:grid;gap:10px;max-height:55vh;overflow:auto;padding-right:8px}
+    .cart-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(11,61,145,0.02),rgba(255,255,255,0.01));border:1px solid rgba(212,175,55,0.06)}
+    .ci-left{flex:1}
+    .ci-name{font-weight:700;color:#112}
+    .ci-meta{font-size:13px;color:#333}
+    .ci-meta b{font-weight:900}
+    .ci-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+    .qty-controls{display:flex;gap:6px;align-items:center}
+    .qty-btn{background:transparent;border:1px solid rgba(0,0,0,0.06);padding:6px 8px;border-radius:8px;cursor:pointer}
+    .remove-btn{background:transparent;border:none;color:#c62828;font-weight:800;font-size:18px;cursor:pointer}
+
+    .summary{margin-top:12px;padding:12px;border-radius:10px;background:linear-gradient(90deg,#f8f4ea,#fff);border:1px solid rgba(212,175,55,0.12)}
+    .summ-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:800}
+    .actions{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    .select{padding:8px;border-radius:8px;border:1px solid #ddd;font-family:'Poppins',sans-serif}
+
+    /* modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9998}
+    .modal-box{background:#fff;padding:18px;border-radius:12px;width:360px;box-shadow:0 20px 50px rgba(0,0,0,0.4)}
+
+    footer{margin-top:20px;text-align:center;color:#fff;opacity:0.95}
+
+    /* Camera reader styling */
+    #reader{
+      margin-top:12px;
+      border-radius:10px;
+      overflow:hidden;
+      box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+
+    /* Responsive adjustments */
+    @media(max-width:600px){
+      .controls{flex-wrap:wrap}
+      .icon-btn{flex:1;min-width:120px}
+    }
+  </style>
+</head>
+<body>
+  <!-- Update Banner -->
+  <div id="updateBanner">
+    Update available — <button id="updateReload">Refresh</button>
+  </div>
+  <!-- 👇 PASTE THIS SMALL LINE HERE 👇 -->
+<div id="lastSyncTime" style="position:fixed;bottom:6px;right:10px;font-size:11px;color:#ccc;font-weight:600;z-index:99999;">Last sync: --</div>
+
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="logo" id="logoWrap">
+          <img id="logoImg" src="/static/logo.png" alt="logo" onerror="this.style.display='none';document.getElementById('logoText').style.display='flex'">
+          <div id="logoText" class="logo-text" style="display:none">👗 LIBAS</div>
+        </div>
+        <div class="brand-text">
+          <h1>LIBAS</h1>
+          <p>Jo baat LIBAS se ho wo Lafzon me kahan</p>
+        </div>
+      </div>
+
+      <button class="sync-btn" onclick="manualSync()">🔄 Sync Now</button>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT -->
+      <div class="card">
+        <div class="search-container">
+          <div class="controls">
+            <input id="barcodeInput" class="search" placeholder="Search by code or name..." autocomplete="off">
+            <button id="scanQRBtn" class="icon-btn" title="Scan QR">📷 Scan</button>
+            <label for="barcodeImageInput" class="icon-btn" title="Upload barcode image" style="cursor:pointer">🖼️ Upload</label>
+            <input id="barcodeImageInput" type="file" accept="image/*" style="display:none">
+          </div>
+        </div>
+
+        <div id="reader" style="display:none"></div>
+        <div id="resultCard" class="result" style="display:none"></div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="card cart-side">
+        <div class="cart-header">
+          <div class="cart-title">🛒 Cart</div>
+          <div class="cart-count" id="cartCount">0</div>
+        </div>
+
+        <div id="cartItems" class="cart-list">
+          <div style="text-align:center;padding:30px;color:#666">Your cart is empty</div>
+        </div>
+
+        <div id="cartSummary" class="summary" style="display:none">
+          <div class="summ-row"><div>Total Lines</div><div id="summaryItems">0</div></div>
+          <div class="summ-row"><div>Total Qty</div><div id="summaryQty">0</div></div>
+          <div class="summ-row" style="font-size:18px"><div>Total Amount</div><div id="summaryTotal">₹0.00</div></div>
+
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+            <label for="printSize" style="font-weight:700;margin-right:6px;color:#333">Print size:</label>
+            <select id="printSize" class="select">
+              <option value="3inch">3" (80mm)</option>
+              <option value="4inch">4" (105mm)</option>
+              <option value="a6">A6</option>
+              <option value="a4" selected>A4</option>
+            </select>
+          </div>
+
+          <div class="actions">
+            <button class="icon-btn" style="background:linear-gradient(135deg,var(--royal-2),var(--royal));color:#fff;flex:1" onclick="printQuotation()">🖨️ Print</button>
+            <button class="icon-btn" style="background:transparent;border:1px solid rgba(0,0,0,0.12);color:var(--royal)" onclick="clearCart()">🗑️ Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div style="font-weight:700">Address: GN Azad College Road, Vasant Nagar, Pusad-445204 (MH)</div>
+    </footer>
+  </div>
+
+  <!-- qty modal -->
+  <div id="qtyModal" style="display:none" class="modal">
+    <div class="modal-box">
+      <div style="font-weight:900;margin-bottom:8px" id="modalProduct">Add to cart</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px">
+        <button onclick="changeModalQty(-1)" class="qty-btn">-</button>
+        <div id="modalQty" style="font-weight:900;min-width:40px;text-align:center">1</div>
+        <button onclick="changeModalQty(1)" class="qty-btn">+</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer">Cancel</button>
+        <button onclick="confirmAddToCart()" style="flex:1;padding:10px;border-radius:8px;background:linear-gradient(135deg,var(--gold),#ffd87e);border:none;cursor:pointer;font-weight:800">Add to Cart</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Register SW + show update banner when new version is ready
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => {
+          console.log('SW registered:', reg.scope);
+
+          if (reg.waiting) showUpdateBanner(reg);
+          
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && reg.waiting) showUpdateBanner(reg);
+            });
+          });
+
+          let refreshed = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshed) return;
+            refreshed = true;
+            window.location.reload();
+          });
+        })
+        .catch(err => console.warn('SW registration failed', err));
+    }
+
+    function showUpdateBanner(reg) {
+      const banner = document.getElementById('updateBanner');
+      const btn = document.getElementById('updateReload');
+      banner.style.display = 'block';
+      btn.onclick = () => reg.waiting.postMessage('SKIP_WAITING');
+    }
+
+    /* ================== STATE ================== */
+    let excelData = {};
+    let html5QrCode = null;
+    let cameraActive = false;
+    let searchTimeout = null;
+    let currentProduct = null;
+    let cart = [];
+    let modalQty = 1;
+    let modalItem = null;
+    let modalPriceType = '';
+
+    /* ================== HELPERS ================== */
+    function safeNum(v){
+      if (v === undefined || v === null) return 0;
+      if (typeof v === 'string') {
+        const cleaned = v.replace(/[^0-9.\-]/g,'');
+        const n = parseFloat(cleaned);
+        return isNaN(n)?0:n;
+      }
+      const n = Number(v); return isNaN(n)?0:n;
+    }
+    function fmt(v){ return '₹' + Number(v||0).toFixed(2); }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+    /* ================== INIT ================== */
+    window.addEventListener('DOMContentLoaded', ()=>{
+      loadBusyData();
+      setupHandlers();
+      const logo = document.getElementById('logoImg');
+      logo.addEventListener('error', ()=> { document.getElementById('logoText').style.display='flex'; });
+    });
+
+    /* ================== LIVE DATA FROM BUSY (Flask) ================== */
+    async function loadBusyData() {
+      try{
+        const response = await fetch('/api/search', { cache: 'no-store' });
+        if (!response.ok) throw new Error('API error ' + response.status);
+        const data = await response.json();
+        const items = data.items || [];
+
+        const out = {};
+        items.forEach(row => {
+          const alias = String(row.ItemAlias || '').trim();
+          if (!alias) return;
+          out[alias] = {
+            name: row.ItemName || '-',
+            alias: alias,
+            group: row.GroupName || '-',
+            mrp: Number(row.Item_MRP) || 0,
+            salePrice: Number(row.Item_Sale_Price) || 0,
+            wholesale: Number(row.Item_SelfVal_Price) || Number(row.Item_Sale_Price) || 0,
+            stock: row.Stock ?? '-'
+          };
+        });
+        excelData = out;
+      }catch(e){
+        console.error(e);
+        alert('Error loading data: ' + e.message);
+      }
+    }
+
+    async function manualSync() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing…';
+  try {
+    // ask backend to run sync.py and refresh cache.db
+    const r = await fetch('/sync', { method: 'POST' });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.msg || 'Sync failed');
+
+    // then reload items from the fresh cache.db
+    await loadBusyData();
+
+    btn.textContent = '✅ Synced!';
+  } catch (e) {
+    console.error(e);
+    btn.textContent = '❌ Failed';
+    alert('Sync failed: ' + e.message);
+  } finally {
+    setTimeout(() => {
+      btn.textContent = '🔄 Sync Now';
+      btn.disabled = false;
+    }, 1500);
+  }
+}
+
+// --- Auto-sync every 30 seconds (30000 ms) ---
+(function setupAutoSync(){
+  if (window.__libasAutoSync) return;
+  const syncLabel = document.getElementById('lastSyncTime');
+  
+  async function runAutoSync(){
+    try {
+      const r = await fetch('/sync', { method: 'POST' });
+      const j = await r.json();
+      if (j && j.ok) {
+        await loadBusyData();
+        const now = new Date().toLocaleTimeString();
+        if (syncLabel) syncLabel.textContent = `Last sync: ${now}`;
+        console.log('Auto-sync: refreshed items from Busy at', now);
+      } else {
+        console.warn('Auto-sync failed:', j && j.msg);
+      }
+    } catch (e) {
+      console.warn('Auto-sync error:', e);
+    }
+  }
+
+  // run first immediately, then every 30s
+  runAutoSync();
+  window.__libasAutoSync = setInterval(runAutoSync, 30 * 1000);
+})();
+
+
+
+
+    /* ================== UI HANDLERS ================== */
+    function setupHandlers(){
+      const input = document.getElementById('barcodeInput');
+      input.addEventListener('input', onSearchInput);
+      input.addEventListener('keydown', onSearchKey);
+      document.getElementById('scanQRBtn').addEventListener('click', toggleScanner);
+      document.getElementById('barcodeImageInput').addEventListener('change', onImageUpload);
+      document.addEventListener('click', (e)=>{ 
+        if (!e.target.closest('.search-container')) removeDropdown(); 
+      });
+    }
+
+    function onImageUpload(e){
+      const f = e.target.files[0]; if (!f) return;
+      const rd = new FileReader();
+      rd.onload = ev => {
+        Quagga.decodeSingle({
+          src: ev.target.result, numOfWorkers:0, inputStream:{size:800},
+          decoder:{readers:['ean_reader','code_128_reader','code_39_reader','upc_reader','upc_e_reader']}
+        }, res => {
+          if (res && res.codeResult) searchAndShow(res.codeResult.code);
+          else alert('No barcode detected in image');
+        });
+      };
+      rd.readAsDataURL(f); e.target.value='';
+    }
+
+    let dropdownIndex = -1;
+    function onSearchInput(e){
+      clearTimeout(searchTimeout);
+      const q = e.target.value.trim();
+      if (!q) { removeDropdown(); return; }
+      searchTimeout = setTimeout(()=> showDropdown(q), 180);
+    }
+
+    function onSearchKey(e){
+      const dd = document.getElementById('dropdown');
+      if (!dd) return;
+      const items = Array.from(dd.querySelectorAll('.dd-item'));
+      if (e.key === 'ArrowDown'){ e.preventDefault(); dropdownIndex = (dropdownIndex+1) % items.length; highlight(items); }
+      else if (e.key === 'ArrowUp'){ e.preventDefault(); dropdownIndex = dropdownIndex <= 0 ? items.length-1 : dropdownIndex-1; highlight(items); }
+      else if (e.key === 'Enter'){ e.preventDefault(); if (dropdownIndex >= 0) items[dropdownIndex].click(); }
+      else if (e.key === 'Escape') removeDropdown();
+    }
+
+    function showDropdown(q){
+      removeDropdown();
+      const container = document.querySelector('.search-container');
+      const dd = document.createElement('div'); 
+      dd.id='dropdown';
+      
+      const nq = q.toLowerCase().replace(/^0+/, '');
+      const matches = [];
+      for (const a in excelData){
+        const it = excelData[a];
+        if (a.replace(/^0+/,'').toLowerCase().includes(nq) || (it.name||'').toLowerCase().includes(nq)) matches.push(it);
+      }
+      if (matches.length === 0) return;
+      
+      matches.slice(0,12).forEach((it)=>{
+        const div = document.createElement('div'); 
+        div.className='dd-item';
+        div.innerHTML = `<div style="font-weight:800">${esc(it.alias)}</div><div style="font-size:13px;color:#666">${esc(it.name)}</div>`;
+        div.onclick = ()=>{ 
+          searchAndShow(it.alias); 
+          document.getElementById('barcodeInput').value=''; 
+          removeDropdown(); 
+        };
+        dd.appendChild(div);
+      });
+      container.appendChild(dd);
+      dropdownIndex = 0; 
+      highlight(Array.from(dd.querySelectorAll('.dd-item')));
+    }
+    
+    function removeDropdown(){ 
+      const d=document.getElementById('dropdown'); 
+      if(d) d.remove(); 
+      dropdownIndex=-1; 
+    }
+    
+    function highlight(items){ 
+      items.forEach((it,i)=> it.style.background=(i===dropdownIndex?'#f3f6ff':'#fff')); 
+      items[dropdownIndex]?.scrollIntoView({block:'nearest',behavior:'smooth'}); 
+    }
+
+    function searchAndShow(q){
+      const norm = String(q).replace(/^0+/,'');
+      let item = excelData[q] || null;
+      if (!item){
+        for (const a in excelData){
+          if (a.replace(/^0+/,'') === norm){ item = excelData[a]; break; }
+        }
+      }
+      if (!item){ alert('Item not found: ' + q); return; }
+      currentProduct = item;
+      renderProductCard(item);
+    }
+
+    function renderProductCard(it){
+      const rc = document.getElementById('resultCard');
+      rc.style.display='block';
+      rc.innerHTML = `
+        <div class="product-card">
+          <div class="prod-left">
+            <div class="prod-title">${esc(it.name)}</div>
+            <div class="prod-code">Code: <b>${esc(it.alias)}</b> • Group: <b>${esc(it.group)}</b></div>
+            <div class="price-row">
+              <div class="price-btn price-mrp">MRP<br><div style="font-size:18px;margin-top:6px">${fmt(it.mrp)}</div></div>
+              <div class="price-btn price-sale" onclick="openQtyModal('${esc(it.alias)}','sale')">Sale<br><div style="font-size:18px;margin-top:6px">${fmt(it.salePrice)}</div></div>
+              <div class="price-btn price-wholesale" onclick="openQtyModal('${esc(it.alias)}','wholesale')">Wholesale<br><div style="font-size:18px;margin-top:6px">${fmt(it.wholesale)}</div></div>
+            </div>
+            <div class="muted">Stock: ${esc(it.stock)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ================== CAMERA / QR - AUTO CLOSE AFTER SCAN ================== */
+    function toggleScanner(){ 
+      if (cameraActive) stopCamera(); 
+      else startCamera(); 
+    }
+    
+    function startCamera(){
+      if (cameraActive) return;
+      html5QrCode = new Html5Qrcode("reader");
+      document.getElementById('reader').style.display='block';
+      document.getElementById('scanQRBtn').textContent='⏹️ Stop';
+      
+      html5QrCode.start(
+        {facingMode:'environment'},
+        {fps:8,qrbox:200}, 
+        decoded => {
+          searchAndShow(decoded);
+          // AUTO-CLOSE camera after successful scan
+          stopCamera();
+        }, 
+        err => {}
+      ).then(()=> cameraActive=true)
+        .catch(e=> { alert('Camera error: '+e.message) });
+    }
+    
+    function stopCamera(){
+      if (!html5QrCode) return;
+      html5QrCode.stop()
+        .then(()=>{ 
+          document.getElementById('reader').style.display='none'; 
+          document.getElementById('scanQRBtn').textContent='📷 Scan'; 
+          cameraActive=false;
+        })
+        .catch(()=>{});
+    }
+
+    /* ================== MODAL & CART ================== */
+    function openQtyModal(alias, priceType){
+      modalItem = excelData[alias];
+      modalPriceType = priceType;
+      modalQty = 1;
+      document.getElementById('modalProduct').textContent = `${modalItem.name} — ${priceType === 'sale' ? 'Sale' : 'Wholesale'} ${fmt(priceType === 'sale' ? modalItem.salePrice : modalItem.wholesale)}`;
+      document.getElementById('modalQty').textContent = modalQty;
+      document.getElementById('qtyModal').style.display='flex';
+    }
+    
+    function closeModal(){ 
+      document.getElementById('qtyModal').style.display='none'; 
+      modalItem=null; 
+      modalPriceType=''; 
+      modalQty=1; 
+    }
+    
+    function changeModalQty(delta){ 
+      modalQty = Math.max(1, modalQty + delta); 
+      document.getElementById('modalQty').textContent = modalQty; 
+    }
+
+    function confirmAddToCart(){
+      if (!modalItem) return;
+      const price = modalPriceType === 'sale' ? safeNum(modalItem.salePrice) : safeNum(modalItem.wholesale);
+      const idx = cart.findIndex(c=> c.alias === modalItem.alias && c.priceType === modalPriceType);
+      if (idx >= 0){
+        cart[idx].quantity += modalQty;
+        cart[idx].total = cart[idx].quantity * cart[idx].price;
+      } else {
+        cart.push({
+          alias: modalItem.alias,
+          name: modalItem.name,
+          group: modalItem.group,
+          priceType: modalPriceType,
+          price: price,
+          quantity: modalQty,
+          total: price * modalQty
+        });
+      }
+      updateCart();
+      closeModal();
+    }
+
+    function updateCart(){
+      const el = document.getElementById('cartItems');
+      if (cart.length === 0){
+        el.innerHTML = `<div style="text-align:center;padding:30px;color:#666">Your cart is empty</div>`;
+        document.getElementById('cartSummary').style.display='none';
+        document.getElementById('cartCount').textContent = '0';
+        return;
+      }
+      el.innerHTML = cart.map((it, i)=> `
+        <div class="cart-item">
+          <div class="ci-left">
+            <div class="ci-name">${esc(it.name)}</div>
+            <div class="ci-meta"><b>${esc(it.alias)}</b> • <b>${esc(it.group)}</b> • ${it.priceType === 'sale' ? 'Sale' : '<span style="color:var(--redwholesale);font-weight:800">Wholesale</span>'} • ${fmt(it.price)}</div>
+          </div>
+          <div class="ci-right">
+            <div class="qty-controls">
+              <button class="qty-btn" onclick="changeCartQty(${i}, -1)">-</button>
+              <div style="min-width:30px;text-align:center;font-weight:800">${it.quantity}</div>
+              <button class="qty-btn" onclick="changeCartQty(${i}, 1)">+</button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="font-weight:900">${fmt(it.total)}</div>
+              <button class="remove-btn" title="Remove" onclick="removeCartItem(${i})">✕</button>
+            </div>
+          </div>
+        </div>`).join('');
+
+      const totalLines = cart.length;
+      const totalQty = cart.reduce((s,i)=> s + i.quantity, 0);
+      const totalAmount = cart.reduce((s,i)=> s + i.total, 0);
+      document.getElementById('summaryItems').textContent = totalLines;
+      document.getElementById('summaryQty').textContent = totalQty;
+      document.getElementById('summaryTotal').textContent = fmt(totalAmount);
+      document.getElementById('cartCount').textContent = totalLines;
+      document.getElementById('cartSummary').style.display = 'block';
+    }
+
+    function changeCartQty(i, delta){
+      cart[i].quantity = Math.max(1, cart[i].quantity + delta);
+      cart[i].total = cart[i].quantity * cart[i].price;
+      updateCart();
+    }
+    
+    function removeCartItem(i){
+      if (!confirm('Remove this item?')) return;
+      cart.splice(i,1);
+      updateCart();
+    }
+    
+    function clearCart(){ 
+      if (!confirm('Clear cart?')) return; 
+      cart=[]; 
+      updateCart(); 
+    }
+
+    /* ================== INVOICE COUNTER ================== */
+    function getTodayKey(){
+      const d = new Date();
+      const y = d.getFullYear().toString().padStart(4,'0');
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      return `${y}${m}${day}`;
+    }
+    
+    function nextInvoiceNumber(){
+      const key = 'libas-invoice-' + getTodayKey();
+      let val = localStorage.getItem(key);
+      val = val ? parseInt(val,10) : 0;
+      val++;
+      localStorage.setItem(key, String(val));
+      const inv = `INV-${getTodayKey()}-${String(val).padStart(3,'0')}`;
+      return inv;
+    }
+
+    /* ================== PRINT QUOTATION ================== */
+    function printQuotation(){
+      if (cart.length === 0){ alert('Cart empty'); return; }
+      const size = document.getElementById('printSize').value;
+      const width = size === '3inch' ? '80mm' : size === '4inch' ? '105mm' : size === 'a6' ? '105mm' : '210mm';
+      const fontBase = size === '3inch' ? 10 : size === '4inch' ? 11 : size === 'a6' ? 12 : 13;
+      const invNo = nextInvoiceNumber();
+      const dateTime = new Date().toLocaleString();
+      const totalQty = cart.reduce((s,i)=> s + i.quantity, 0);
+      const totalAmount = cart.reduce((s,i)=> s + i.total, 0);
+
+      let contentRows = '';
+      if (size === '3inch' || size === '4inch') {
+        contentRows = cart.map((it, idx)=>{
+          return `
+            <div class="item-block">
+              <div class="row-top"><div class="sno">${idx+1}.</div><div class="name">${esc(it.name)}</div></div>
+              <div class="meta-line"><div><b>Code:</b> <span class="alias">${esc(it.alias)}</span></div><div><b>Group:</b> <span class="group">${esc(it.group)}</span></div></div>
+              <div class="meta-line"><div><b>${it.priceType === 'sale' ? 'Sale' : 'Wholesale'}</b> <span class="price">${fmt(it.price)}</span></div><div style="text-align:right"><b>Qty</b> ${it.quantity}  <span class="total-right">${fmt(it.total)}</span></div></div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        contentRows = `
+          <table class="items" role="table">
+            <thead>
+              <tr><th>S.No</th><th>Name</th><th>Alias</th><th>Group</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              ${cart.map((it,idx)=>`<tr>
+                <td>${idx+1}</td>
+                <td>${esc(it.name)}</td>
+                <td style="font-weight:900">${esc(it.alias)}</td>
+                <td style="font-weight:900">${esc(it.group)}</td>
+                <td style="text-align:center">${it.quantity}</td>
+                <td style="text-align:right">${fmt(it.price)}</td>
+                <td style="text-align:right">${fmt(it.total)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      const headerHtml = `
+        <div class="header-row">
+          <div class="logo-wrap"><img src="/static/logo.png" onerror="this.style.display='none'"></div>
+          <div class="shop">
+            <div class="title">LIBAS Quotation</div>
+            <div class="contact">Mobile: 7588756668</div>
+            <div class="address">GN Azad College Road, Vasant Nagar, Pusad-445204 (MH)</div>
+          </div>
+        </div>
+      `;
+
+      const html = `
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Quotation - ${invNo}</title>
+          <style>
+            @page { size: ${width} auto; margin: 6mm; }
+            body { font-family: Arial, Helvetica, sans-serif; font-size: ${fontBase}px; color:#111; margin:0; padding:6px; -webkit-print-color-adjust:exact; }
+            .card { border-radius:6px; padding:8px; border:2px solid #d4af37; box-shadow:0 6px 18px rgba(0,0,0,0.08); background:#fff }
+            .header-row{display:flex;gap:8px;align-items:center}
+            .logo-wrap{width:56px;height:56px;flex:0 0 56px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,0.04)}
+            .logo-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+            .shop .title{font-size:${Math.round(fontBase*1.2)}px;font-weight:900;color:#0b3d91}
+            .shop .contact{font-weight:700;color:#d4af37;margin-top:4px}
+            .shop .address{font-size:${Math.max(9, fontBase-1)}px;color:#333}
+            .meta{margin-top:6px;font-size:${Math.max(9, fontBase-1)}px}
+            .inv{margin-top:6px;font-weight:700}
+            .item-block{padding:6px 4px;border-bottom:1px dashed #ddd;word-break:break-word}
+            .row-top{display:flex;gap:8px;align-items:center}
+            .sno{width:18px;flex:0 0 18px;font-weight:800}
+            .name{font-weight:800;flex:1}
+            .meta-line{font-size:${Math.max(9, fontBase-2)}px;color:#222;margin-top:4px;display:flex;justify-content:space-between;gap:6px}
+            .price{font-weight:800;color:#111}
+            .total-right{font-weight:900}
+            table.items{width:100%;border-collapse:collapse;margin-top:8px;font-size:${fontBase}px}
+            table.items th{background: linear-gradient(90deg,#0b3d91,#174ea6);color:#fff;padding:6px;border:1px solid rgba(0,0,0,0.03);font-weight:800}
+            table.items td{padding:6px;border-bottom:1px solid #eee;vertical-align:top}
+            .summary{margin-top:8px;padding:8px;border-radius:6px;border:2px solid #d4af37;background:linear-gradient(90deg,#fff8e1,#fff)}
+            .total-amount{font-weight:900;font-size:${Math.round(fontBase*1.1)}px}
+            .footer{margin-top:8px;text-align:center;font-weight:800;color:#333}
+            .no-return{margin-top:6px;color:#b71c1c;font-weight:900}
+            td, th { word-break: break-word; overflow-wrap: break-word; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+              ${headerHtml}
+            </div>
+
+            <div class="inv">Invoice: <strong>${invNo}</strong> &nbsp;&nbsp; Printed: ${esc(dateTime)}</div>
+
+            <div style="margin-top:8px">
+              ${contentRows}
+            </div>
+
+            <div class="summary">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div><strong>Total Quantity:</strong> ${totalQty}</div>
+                <div class="total-amount">TOTAL: ${fmt(totalAmount)}</div>
+              </div>
+            </div>
+
+            <div class="footer">
+              Thank you for shopping with LIBAS 💙
+              <div class="no-return">NO RETURN AND NO EXCHANGE</div>
+            </div>
+          </div>
+        </body>
+      </html>`;
+
+      const w = window.open('','_blank');
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      setTimeout(()=> w.print(), 700);
+    }
+  </script>
+</body>
+</html>
